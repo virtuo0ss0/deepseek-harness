@@ -16,18 +16,19 @@
 
 ## Next step
 
-Complete the baseline repository build prerequisite before editing production files. The previous build session was interrupted and its terminal result is unavailable; no complete client build record exists. Then check for a maintained equivalent, bring the accepted Phase 1 design into this checkout, and implement transport/state tests first.
+Baseline build prerequisite is complete. Implement transport/state tests first, then the browser consumer, composition and external-package validation. The accepted Phase 1 design is now in `docs/provider-editor-design.md`.
 
 ## Verification
 
 - Passing: dependency installation; 30 authorization tests.
-- Unknown: baseline build completion; resuming the build check.
+- Passing: full baseline `pnpm run build` (host and client compilation, bundles, Web frontend, 240 recorded client artifacts). Initial sandbox run failed at Vite config loading with filesystem Access denied; unchanged escalated retry passed. Logs outside the checkout: `../web-authorization-baseline-build.log` and `../web-authorization-baseline-build-retry.log`.
 - An earlier mistaken `pnpm run test -- packages/credentials/authorization/tests` selected the broad suite; it was stopped. Unrelated workflow and Windows symlink tests failed during that partial run. This is not an exhaustive baseline test result. The corrected focused command above passed.
 - Typecheck, lint, external-package smoke, and new feature tests have not completed.
 
 ## Files and blockers
 
-- Current tracked work: this checkpoint only.
-- Accepted Phase 1 research remains outside the checkout at `../../docs/provider-editor-design.md`.
-- An untracked `packages/typert/generator/tests/.explicit-service-3Xqmjf/` directory contains fixture files from the interrupted broad test run; inspect and remove only this confirmed generated residue.
-- No production implementation until build/test executability is confirmed. No commits pushed, PR created, or package published.
+- Current files: this checkpoint and `docs/provider-editor-design.md`; production implementation has not started.
+- Confirmed generated residue from the interrupted broad test run was removed.
+- Initial checkpoint committed locally. Git author was unset; configured repository-local verified GitHub username and no-reply address.
+- Additional discovery: `lxy271713/dsh-account-authorization` requires missing `target` metadata and refuses text/secret prompts; `Gluking81/dsh-openai-codex-web-bridge` targets 0.1.2-alpha.1 and custom HTTP routes. Neither establishes an equivalent current-Remote implementation. Source review, not runtime compatibility certification.
+- No commits pushed, PR created, or package published. No current execution blocker.
