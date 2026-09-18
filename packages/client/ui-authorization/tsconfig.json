@@ -1,0 +1,20 @@
+{
+  "extends": "../../../tsconfig.base.client.json",
+  "compilerOptions": { "rootDir": "src", "outDir": "lib/types" },
+  "include": ["src"],
+  "references": [
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../../vendor/schemastery" },
+    { "path": "../../api/gateway/tsconfig.client.json" },
+    { "path": "../../credentials/authorization" },
+    { "path": "../../util/crypto" },
+    { "path": "../../credentials/web-authorization" },
+    { "path": "../locale" },
+    { "path": "../store" },
+    { "path": "../ui-primitives" },
+    { "path": "../ui-renderer" },
+    { "path": "../ui-settings-models" },
+    { "path": "../ui-slots" },
+    { "path": "../../typert/protocol" }
+  ]
+}

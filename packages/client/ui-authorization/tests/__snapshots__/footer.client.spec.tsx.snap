@@ -1,0 +1,3 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`renders select choices and safe link attributes with a stable user-output snapshot 1`] = `"Provider authorizationConnect using a registered authorization flow. Closing this panel cancels your current attempt.Reloading this page abandons the attempt. It will expire on the host if cancellation cannot be delivered.RefreshNo authorization flows are registered.ExampleAuthorization in progressContinue in browserOpen authorization pageVerification code: ABCDChoose environmentChoose environmentTestSubmitCancel authorization"`;

@@ -12,6 +12,12 @@ Attempt cancellation must abort only the controller supplied to that attempt's `
 
 Implementation and verification progress is recorded in [the tracked checkpoint](../work/web-authorization-continuation.md).
 
+The implementation now has separate host and browser companion packages. Source Gateway/Loader tests
+exercise an existing catalog API-key flow, while browser controller and component tests cover transient
+input, stale replies, ambiguous begin responses and teardown. Both package compiler faces and the
+browser bundle build pass. Generated-wire enforcement, full browser composition and external packed
+installation remain separate acceptance steps; these tests do not yet establish those guarantees.
+
 ## Summary
 
 **Recommendation: do not implement a new Provider Editor extension API.** Current master already exposes documented, public Models-page card and footer slots, and both `dsh-codex-connect` and `pi2dsh` use them. The original broad claim that provider setup requires private Models-page access is obsolete. Full replacement of the built-in editor remains unsupported, but ordinary authentication controls do not require that replacement.
