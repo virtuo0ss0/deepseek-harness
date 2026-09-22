@@ -27,15 +27,26 @@ export class WebAuthorizationService extends TypertRemoteService {
     ctx.effect(() => () => this.attempts.dispose(), 'web-authorization: attempts')
   }
 
-  /** @returns all registered flows, without other clients' attempt identities. */
+  /**
+   * Read the authorization directory.
+   * @returns all registered flows, without other clients' attempt identities.
+   */
   @Remote
   list(): AuthorizationEntry[] { return this.attempts.list() }
 
-  /** @param request - random client capability and registered flow selection. @returns initial state. */
+  /**
+   * Begin or recover an owned attempt.
+   * @param request - random client capability and registered flow selection.
+   * @returns initial state.
+   */
   @Remote
   begin(request: BeginRequest): AttemptView { return this.attempts.begin(request) }
 
-  /** @param attemptId - private capability. @returns redacted current state, renewing a live lease. */
+  /**
+   * Observe current state and renew a live lease.
+   * @param attemptId - private capability.
+   * @returns redacted current state.
+   */
   @Remote
   status(attemptId: AttemptId): AttemptView { return this.attempts.status(attemptId) }
 
@@ -50,7 +61,10 @@ export class WebAuthorizationService extends TypertRemoteService {
     this.attempts.answer(attemptId, promptId, answer)
   }
 
-  /** @param attemptId - exact attempt to withdraw; cannot address a newer attempt by key. */
+  /**
+   * Withdraw only the identified attempt.
+   * @param attemptId - exact attempt to withdraw; cannot address a newer attempt by key.
+   */
   @Remote
   cancel(attemptId: AttemptId): void { this.attempts.cancel(attemptId) }
 }

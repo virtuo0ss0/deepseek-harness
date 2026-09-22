@@ -31,13 +31,13 @@ export async function apply(ctx: Context, config: Config): Promise<() => Promise
     const t = scope.locale.bind('authorization') as FooterInjected['t']
     scope.slots.inject('settings.models.footer', function* () {
       const controller = new AuthorizationController(scope.remote.webAuthorization, config.pollMs)
-      yield () => controller.dispose()
+      yield () =>{  controller.dispose() }
       const injected: FooterInjected = {
         hooks: { snapshot: controller.store }, t,
         open: () => controller.open(), refresh: () => controller.refresh(),
         begin: (flow, method) => controller.begin(flow, method),
         answer: (id, answer) => controller.answer(id, answer),
-        cancel: () => controller.cancel(), dismiss: () => controller.dismiss(),
+        cancel: () => controller.cancel(), dismiss: () =>{  controller.dismiss() },
       }
       yield scope.slots.register({ name: 'settings.models.footer', id: 'authorization', locale: 'authorization', inject: () => injected }, AuthorizationFooter)
     })

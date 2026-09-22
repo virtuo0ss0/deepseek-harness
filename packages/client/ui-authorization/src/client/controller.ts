@@ -25,6 +25,7 @@ export interface State {
 
 /** Scope-owned controller; losing the scope loses the attempt capability. */
 export class AuthorizationController {
+  /** Allowlisted display state consumed through the renderer's selector hook. */
   readonly store: SnapshotStore<State> = createSnapshotStore<State>({ flows: [], busy: false, error: false })
   private timer: ReturnType<typeof setTimeout> | undefined
   private active = false
@@ -37,29 +38,32 @@ export class AuthorizationController {
     if (!Number.isSafeInteger(pollMs) || pollMs < 250 || pollMs > 10000) throw new Error('Invalid authorization polling interval')
   }
 
-  /** Activate observation while the footer is rendered; cleanup abandons the exact attempt. */
+  /**
+   * Activate observation while the footer is rendered.
+   * @returns cleanup that abandons the exact attempt.
+   */
   open(): () => void {
     if (this.disposed) return () => {}
     this.active = true
     void this.refresh()
-    return () => this.close()
+    return () =>{  this.close() }
   }
 
   /** Fetch metadata and owned state, discarding replies older than the last user action. */
   async refresh(): Promise<void> {
-    if (!this.active || this.disposed || this.polling) return
+    if (!this.isOpen() || this.polling) return
     this.polling = true
     clearTimeout(this.timer)
     const generation = this.generation
     const id = this.id
     try {
       const [flows, status] = await Promise.all([this.remote.list(), id ? this.remote.status(id) : undefined])
-      if (generation !== this.generation || !this.active || this.disposed) return
+      if (!this.isCurrent(generation)) return
       this.store.update((state) => {
         if (flows.ok) state.flows = flows.value
         state.error = !flows.ok || (status !== undefined && !status.ok)
         if (status?.ok) state.attempt = status.value
-        else if (status && !status.ok && status.error.code === 'authorization/rejected'
+        else if (status && status.error.code === 'authorization/rejected'
           && status.error.details.reason === 'unknown-attempt') {
           delete state.attempt
           delete state.label
@@ -68,14 +72,18 @@ export class AuthorizationController {
       })
     } catch (_error) {
       // Foreign transport adapters may reject; never render their raw diagnostics.
-      if (generation === this.generation && this.active) this.store.update((state) => { state.error = true })
+      if (this.isCurrent(generation)) this.store.update((state) => { state.error = true })
     } finally {
       this.polling = false
-      if (this.active && !this.disposed) this.timer = setTimeout(() => { void this.refresh() }, this.pollMs)
+      if (this.isOpen()) this.timer = setTimeout(() => { void this.refresh() }, this.pollMs)
     }
   }
 
-  /** @param flow - registered selection. @param method - selected registered method. */
+  /**
+   * Start an attempt with a fresh browser capability.
+   * @param flow - registered selection.
+   * @param method - selected registered method.
+   */
   async begin(flow: AuthorizationEntry, method: string): Promise<void> {
     if (!this.active || this.disposed || this.id || this.store.getSnapshot().busy) return
     const id = randomUUID() as AttemptId
@@ -84,7 +92,7 @@ export class AuthorizationController {
     this.store.update((state) => { state.busy = true; state.error = false; state.label = flow.label })
     try {
       const result = await this.remote.begin({ attemptId: id, key: flow.key, method })
-      if (generation !== this.generation || this.disposed) return
+      if (!this.isCurrent(generation)) return
       this.store.update((state) => {
         if (result.ok) state.attempt = result.value
         else state.error = true
@@ -100,7 +108,11 @@ export class AuthorizationController {
     }
   }
 
-  /** @param promptId - visible question identity. @param answer - transient input, never stored. */
+  /**
+   * Submit a transient answer for the current attempt.
+   * @param promptId - visible question identity.
+   * @param answer - transient input, never stored.
+   */
   async answer(promptId: PromptId, answer: string): Promise<void> {
     const id = this.id
     if (!id || !this.active || this.store.getSnapshot().busy) return
@@ -124,6 +136,10 @@ export class AuthorizationController {
 
   /** Remove UI state and timers. Remote unmount owns pending carrier cancellation. */
   dispose(): void { this.close(); this.disposed = true }
+
+  private isOpen(): boolean { return this.active && !this.disposed }
+
+  private isCurrent(generation: number): boolean { return generation === this.generation && this.isOpen() }
 
   private close(): void {
     this.active = false

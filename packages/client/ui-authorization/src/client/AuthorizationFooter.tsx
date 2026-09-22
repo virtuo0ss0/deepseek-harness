@@ -41,13 +41,13 @@ function Prompt({ prompt, answer, t }: {
     <label>
       <span>{prompt.message}</span>
       {prompt.kind === 'select'
-        ? <select value={value} onChange={event => setValue(event.target.value)} required disabled={submitting}>
+        ? <select value={value} onChange={(event) =>{  setValue(event.target.value) }} required disabled={submitting}>
           <option value="" disabled>{prompt.message}</option>
           {prompt.options.map(option => <option key={option.id} value={option.id}>{option.label}{option.description ? ` — ${option.description}` : ''}</option>)}
         </select>
         : <Input type={prompt.kind === 'secret' ? 'password' : 'text'} value={value}
           autoComplete="off" spellCheck={false} placeholder={prompt.placeholder}
-          onChange={event => setValue(event.target.value)} disabled={submitting} />}
+          onChange={(event) =>{  setValue(event.target.value) }} disabled={submitting} />}
     </label>
     <Button type="submit" disabled={submitting}>{t('submit')}</Button>
   </form>

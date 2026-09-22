@@ -85,7 +85,10 @@ export class WebAuthorizationAttempts {
     }
   }
 
-  /** @returns registered metadata, without credential state or attempt capabilities. */
+  /**
+   * Read the registered flow directory.
+   * @returns registered metadata, without credential state or attempt capabilities.
+   */
   list(): AuthorizationEntry[] {
     this.assertActive()
     return this.authorization.list().map(flow => ({
@@ -134,7 +137,7 @@ export class WebAuthorizationAttempts {
             throw refusal('prompt-too-large')
           }
           return await new Promise<string>((resolve, reject) => {
-            const withdraw = (): void => this.clearPrompt(attempt, refusal('withdrawn'))
+            const withdraw = (): void =>{  this.clearPrompt(attempt, refusal('withdrawn')) }
             attempt.pending = { view, resolve, reject, detach: () => prompt.signal?.removeEventListener('abort', withdraw) }
             attempt.view.prompt = view
             this.bound(attempt)
@@ -146,7 +149,11 @@ export class WebAuthorizationAttempts {
     return this.snapshot(attempt)
   }
 
-  /** @param id - retained browser capability. @returns state; observing a running attempt renews its lease. */
+  /**
+   * Observe an attempt and renew its running lease.
+   * @param id - retained browser capability.
+   * @returns current projected state.
+   */
   status(id: AttemptId): AttemptView {
     const attempt = this.get(id)
     if (this.running(attempt)) this.renew(attempt)
@@ -172,7 +179,10 @@ export class WebAuthorizationAttempts {
     pending.resolve(answer)
   }
 
-  /** @param id - capability of the attempt to withdraw; never cancels by credential key. */
+  /**
+   * Withdraw one owned attempt, never cancelling by credential key.
+   * @param id - capability of the attempt to withdraw.
+   */
   cancel(id: AttemptId): void {
     const attempt = this.get(id)
     if (!this.running(attempt)) throw refusal('stale-attempt')

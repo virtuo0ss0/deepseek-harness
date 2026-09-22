@@ -21,6 +21,15 @@
 
 Next milestone: test generated-wire validation and actual browser Cordis/Remote mount-dispose behavior, provide a tested opt-in composition, then pack/install externally against the pinned baseline. Finish documentation and relevant repository gates. Do not redo completed host/controller/component coverage. The accepted design is in `docs/provider-editor-design.md`.
 
+### Resume audit, 2026-09-22
+
+- The browser milestone is committed. The next milestone adds the passing Cordis declaration-lifecycle test and `tests/built-smoke.mjs`, public JSDoc and test compiler-face fixes.
+- Generated-wire smoke passed through built Gateway: required-field/type rejection, unknown-field stripping, prompt correlation, host-only grant settlement and service disposal.
+- External smoke passed from `../web-authorization-external-consumer`: 23 local tarballs installed outside the checkout with pnpm overrides; no workspace links. Pack helper `../pack-web-authorization.ps1`, tarballs `../web-authorization-packed`, install log `../web-authorization-external-install.log`. Full deployed browser/real OAuth not tested.
+- Repository host and client compiler programs passed. Full `pnpm run build` passed on the authorized retry; `../web-authorization-final-build-retry.log` records 242 client artifacts. Default build reached Vite then hit the known sandbox denial.
+- Typed lint was corrected without removing race checks: helper methods re-read scope state after awaits. All 17 focused tests and focused typed lint pass (`../web-authorization-milestone-tests.log`, `../web-authorization-focused-lint.log`). Remaining work: documentation/catalog verification and opt-in composition guidance. Do not rerun the passing full build absent relevant changes.
+- Saved earlier failures: `../web-authorization-lint.log`; `../web-authorization-doc-sync.log` (31 passed/10 failed); `../web-authorization-doc-tests.log`. Docs build needs sandbox retry; site fixture has a Windows symlink failure. Documentation updates and pairing sidecars are in progress. Original research remains in Git history and an unchanged external copy at `../provider-editor-phase1-research.md`; maintained design now describes the implementation and limitations. Generated catalog work is pending verification, not a core runtime change.
+
 ## Verification
 
 - Passing: dependency installation; 30 authorization tests.

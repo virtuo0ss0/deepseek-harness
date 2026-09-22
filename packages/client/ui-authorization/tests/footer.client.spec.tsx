@@ -11,6 +11,12 @@ import { en } from '../src/client/locales.ts'
 
 afterEach(cleanup)
 
+const unusedHook = (): never => { throw new Error('Footer must not consume unrelated global state') }
+const standard = {
+  usePanelInfo: unusedHook, useSessions: unusedHook, useSessionPendingInteraction: unusedHook,
+  useWorkspaces: unusedHook, useResource: unusedHook,
+}
+
 it('masks and clears secret input when prompt identity changes, and disposes observation', () => {
   const store = createSnapshotStore<State>({ flows: [], busy: false, error: false, attempt: {
     attemptId: 'attempt' as AttemptId, status: 'running', notices: [{ message: '<script>not markup</script>' }],
@@ -19,6 +25,7 @@ it('masks and clears secret input when prompt identity changes, and disposes obs
   const close = vi.fn()
   const answer = vi.fn(async () => {})
   const props: FooterProps = {
+    ...standard,
     useSnapshot: bindSnapshotSelector(store), open: () => close,
     refresh: async () => {}, begin: async () => {}, answer,
     cancel: async () => {}, dismiss: () => {}, t: key => en[key],
@@ -28,9 +35,9 @@ it('masks and clears secret input when prompt identity changes, and disposes obs
   expect(input.type).toBe('password')
   fireEvent.change(input, { target: { value: 'never-retain' } })
   expect(rendered.container.querySelector('script')).toBeNull()
-  act(() => store.update((state) => {
+  act(() =>{  store.update((state) => {
     state.attempt!.prompt = { promptId: 'second' as PromptId, kind: 'text', message: 'Next code' }
-  }))
+  }) })
   expect(screen.getByLabelText<HTMLInputElement>('Next code').value).toBe('')
   expect(JSON.stringify(store.getSnapshot())).not.toContain('never-retain')
   fireEvent.change(screen.getByLabelText('Next code'), { target: { value: 'public-answer' } })
@@ -49,6 +56,7 @@ it('renders select choices and safe link attributes with a stable user-output sn
   } })
   const answer = vi.fn(async () => {})
   const props: FooterProps = {
+    ...standard,
     useSnapshot: bindSnapshotSelector(store), open: () => () => {}, refresh: async () => {},
     begin: async () => {}, answer, cancel: async () => {}, dismiss: () => {}, t: key => en[key],
   }

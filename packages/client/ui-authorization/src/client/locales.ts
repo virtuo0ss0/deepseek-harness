@@ -7,7 +7,9 @@ export const en = {
   error: 'Authorization state could not be confirmed. Reconnect or refresh to check it.', busy: 'Waiting for the host…',
   reload: 'Reloading this page abandons the attempt. It will expire on the host if cancellation cannot be delivered.',
 } as const
+/** Dictionary keys shared by both supported locales. */
 export type CopyKey = keyof typeof en
+/** Simplified Chinese authorization copy. */
 export const zh: Record<CopyKey, string> = {
   title: 'Provider 授权', intro: '使用已注册的授权流程连接。关闭此面板会取消当前尝试。',
   empty: '尚未注册授权流程。', refresh: '刷新', cancel: '取消授权',
