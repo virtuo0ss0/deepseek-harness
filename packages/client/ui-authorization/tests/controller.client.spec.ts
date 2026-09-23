@@ -8,7 +8,7 @@ import { AuthorizationController, type Operations } from '../src/client/controll
 
 const flow: AuthorizationEntry = { key: 'test/flow' as CredentialKey, label: 'Example', methods: [{ id: 'login', label: 'Login' }], inFlight: false }
 const controllers: AuthorizationController[] = []
-afterEach(() => { controllers.splice(0).forEach((controller) =>{  controller.dispose() }); vi.useRealTimers() })
+afterEach(() => { controllers.splice(0).forEach((controller) => { controller.dispose() }); vi.useRealTimers() })
 
 function setup() {
   let view: AttemptView | undefined

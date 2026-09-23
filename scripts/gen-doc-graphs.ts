@@ -311,8 +311,16 @@ const SERVICE_ROLES: ServiceRole[] = [
     title: 'Authorization flow registry',
     mode: 'seam',
     implementations: [],
-    consumers: ['llm-pi-ai'],
+    consumers: ['llm-pi-ai', 'web-authorization'],
     note: 'Flows are registered by the plugin that knows how to obtain one credential and keyed by the record they write; the seam owns the conversation and the one-attempt-per-key lifecycle, never the protocol.',
+  },
+  {
+    key: 'webAuthorization',
+    pkg: 'web-authorization',
+    title: 'Web authorization interaction',
+    mode: 'core',
+    consumers: ['client-ui-authorization'],
+    note: 'Projects registered flows into bounded browser interactions; the existing authorization service owns execution and credential writes.',
   },
   {
     key: 'sessionTelemetry',

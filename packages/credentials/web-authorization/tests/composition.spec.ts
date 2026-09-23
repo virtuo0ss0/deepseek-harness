@@ -76,7 +76,7 @@ it('loads the companion, drives a real catalog flow through Gateway, and dispose
     const entry = [...ctx.loader.entries()].find(candidate => candidate.options.id === 'companion')
     expect(entry?.fiber).toBeDefined()
     await entry!.fiber!.dispose()
-    await vi.waitFor(() =>{  expect(ctx.authorization.describe(key)?.inFlight).toBe(false) })
+    await vi.waitFor(() => { expect(ctx.authorization.describe(key)?.inFlight).toBe(false) })
     expect(() => companion.status(second)).toThrow()
   } finally {
     await ctx.fiber.dispose()

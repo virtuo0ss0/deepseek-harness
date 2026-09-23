@@ -46,7 +46,7 @@ export class AuthorizationController {
     if (this.disposed) return () => {}
     this.active = true
     void this.refresh()
-    return () =>{  this.close() }
+    return () => { this.close() }
   }
 
   /** Fetch metadata and owned state, discarding replies older than the last user action. */

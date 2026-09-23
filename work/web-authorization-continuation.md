@@ -2,49 +2,47 @@
 
 ## Completed
 
-- Real writable checkout of `virtuo0ss0/deepseek-harness`; local `feat/web-authorization` tracks the same origin branch.
-- Frozen-lockfile dependency installation completed with Node 24.13.0 and pnpm 11.19.0 (repository specifies pnpm 11.7.0).
-- `pnpm run test packages/credentials/authorization/tests`: 2 files, 30 tests passed. Saved Vitest results confirm this after interruption.
-- Root/package instructions, architecture, authorization service, and Remote/Gateway documentation inspected.
-- Host companion package `packages/credentials/web-authorization`: generated-Remote service declaration plus bounded attempt manager, browser-safe types, README pair, and eight passing state-machine tests.
-- Current Gateway/Loader integration passes with the registered pi-ai DeepSeek API-key flow using dummy credentials; companion disposal aborts an active flow. Generated host Remote artifacts build successfully.
-- Browser consumer `packages/client/ui-authorization` implements the public footer directory, keyed text/secret/select prompts, locale-owned copy and scope-owned polling. Five controller and two component tests pass, including an owner-local output snapshot. Browser-safe UUID generation uses the repository utility for HTTP LAN compatibility.
+- Work remains only in the real writable fork checkout on `feat/web-authorization`; no push, publication or PR.
+- Implemented two opt-in packages: `packages/credentials/web-authorization` (host attempt manager and generated Remote methods) and `packages/client/ui-authorization` (generic Models footer consumer).
+- Existing authorization service owns flow execution, locks and credential writes. No Provider Editor API, OAuth engine, credential store or core runtime changes.
+- Host projects bounded flow/status/notice/prompt data. Browser answers correlate attempt and prompt identity. Cancellation aborts the exact attempt controller. API-key references and `keyConfigured` semantics are unchanged.
+- Browser supports text, secret and select prompts, including empty-string option IDs. Prompt input clears on submit/replacement/unmount. Scope disposal removes state/timers and requests cancellation; host lease handles lost unload requests and reload.
+- Updated bilingual package/design/subsystem documentation, package maps, generated catalogs and the implemented Agent Note. Documentation generator mappings classify the new service; they do not add a core runtime extension point.
+- Installed-package Loader smoke exercised the documented three-row opt-in composition: existing authorization service, host companion and browser plugin host entry. Existing deployments must reuse their authorization owner rather than mount a second one.
 
 ## Architecture decisions
 
-- Consume existing `dsh-authorization` through a reusable companion using current Remote/Gateway and the public `settings.models.footer` slot.
-- No Provider Editor API, provider-specific OAuth, credential store, or reinterpretation of API-key readiness.
-- Host retains credentials; project only allowlisted flow, notice, prompt, and settlement fields. Correlate attempt and prompt identities; preserve service locks and Cordis disposal.
-- No core changes justified or made. Two opt-in packages use generated Remote descriptors; stock profiles remain unchanged.
-
-## Next step
-
-Next milestone: test generated-wire validation and actual browser Cordis/Remote mount-dispose behavior, provide a tested opt-in composition, then pack/install externally against the pinned baseline. Finish documentation and relevant repository gates. Do not redo completed host/controller/component coverage. The accepted design is in `docs/provider-editor-design.md`.
-
-### Resume audit, 2026-09-22
-
-- The browser milestone is committed. The next milestone adds the passing Cordis declaration-lifecycle test and `tests/built-smoke.mjs`, public JSDoc and test compiler-face fixes.
-- Generated-wire smoke passed through built Gateway: required-field/type rejection, unknown-field stripping, prompt correlation, host-only grant settlement and service disposal.
-- External smoke passed from `../web-authorization-external-consumer`: 23 local tarballs installed outside the checkout with pnpm overrides; no workspace links. Pack helper `../pack-web-authorization.ps1`, tarballs `../web-authorization-packed`, install log `../web-authorization-external-install.log`. Full deployed browser/real OAuth not tested.
-- Repository host and client compiler programs passed. Full `pnpm run build` passed on the authorized retry; `../web-authorization-final-build-retry.log` records 242 client artifacts. Default build reached Vite then hit the known sandbox denial.
-- Typed lint was corrected without removing race checks: helper methods re-read scope state after awaits. All 17 focused tests and focused typed lint pass (`../web-authorization-milestone-tests.log`, `../web-authorization-focused-lint.log`). Remaining work: documentation/catalog verification and opt-in composition guidance. Do not rerun the passing full build absent relevant changes.
-- Saved earlier failures: `../web-authorization-lint.log`; `../web-authorization-doc-sync.log` (31 passed/10 failed); `../web-authorization-doc-tests.log`. Docs build needs sandbox retry; site fixture has a Windows symlink failure. Documentation updates and pairing sidecars are in progress. Original research remains in Git history and an unchanged external copy at `../provider-editor-phase1-research.md`; maintained design now describes the implementation and limitations. Generated catalog work is pending verification, not a core runtime change.
+- Public `settings.models.footer`, current generated Remote/Gateway; stock profiles unchanged.
+- Browser keeps only its random capability in memory. Reload abandons it; brief reconnect retains it. Directory never exposes other clients' handles.
+- Secret answers are transient, never snapshot/status/error payloads. Provider notices must honor the existing non-secret text contract.
+- Bounded host state: 32 retained attempts, 16 notices, 32768 UTF-8 bytes per complete view, 2048-byte display fields, 16384-byte answers.
+- Prompt withdrawal is not human decline. Sequential prompts supported; concurrent prompts explicitly fail.
+- Cancellation is not credential deletion, rollback or issuer revocation. A provider ignoring abort may still commit later under existing service semantics.
 
 ## Verification
 
-- Passing: dependency installation; 30 authorization tests.
-- Passing: eight new attempt-manager tests; focused host TypeScript build; staged-config lint of the new package after style fixes; whitespace check. New tests first failed for the missing implementation, then for a fixture teardown call (fixed to dispose owned Cordis fibers).
-- Passing: full baseline `pnpm run build` (host and client compilation, bundles, Web frontend, 240 recorded client artifacts). Initial sandbox run failed at Vite config loading with filesystem Access denied; unchanged escalated retry passed. Logs outside the checkout: `../web-authorization-baseline-build.log` and `../web-authorization-baseline-build-retry.log`.
-- An earlier mistaken `pnpm run test -- packages/credentials/authorization/tests` selected the broad suite; it was stopped. Unrelated workflow and Windows symlink tests failed during that partial run. This is not an exhaustive baseline test result. The corrected focused command above passed.
-- Passing: combined host/controller run (14 tests), component/controller run (7 tests), focused browser TypeScript build and staged-config lint. After replacing UUID generation, controller tests passed again (5). Focused browser tsdown build produced both host stub and browser factory. The bare `pnpm exec tsdown` shim was unavailable; direct `node node_modules/tsdown/dist/run.mjs --config packages/client/ui-authorization/tsdown.config.ts` passed.
-- Full post-change typecheck/lint/build, generated-wire validation, actual browser composition and external-package smoke remain unfinished. Source Gateway tests do not certify generated schema enforcement.
+- Existing authorization tests: 30 passed (two files).
+- New host/controller/component/lifecycle tests: 17 passed (five files). After the final empty-ID select fix, both component tests passed again with the existing user-output snapshot.
+- Full host and client TypeScript programs passed. Focused UI TypeScript and bundle build passed after the final code changes.
+- Full `pnpm run build` passed on the permitted host retry: 242 client artifacts. Default sandbox Vite configuration loading failed with Access denied; identical host retry passed.
+- Repository-wide `pnpm run lint:contracts-ready` passed. Focused typed lint passed after the last select fix. Public JSDoc, whitespace and required catalog checks passed.
+- `pnpm run doc-sync`: 40 passed, one failed. The sole failure is the unchanged `scripts/project-doc-site.spec.ts` symlink fixture: Windows EPERM creating a temporary file symlink, including outside the sandbox. Documentation build, doc typecheck, links, pairing, catalogs and documentation-standard tests all passed. Earlier `test:docs` failures were corrected and its component gates passed in this final aggregate.
+- Built artifact smoke passed: generated required-field/type validation, unknown-field stripping, prompt identity, value-free settlement and service disposal.
+- External package proof passed: 23 local DSH/framework tarballs installed outside the repository against the inspected 0.1.6-alpha.1 baseline, with file overrides rather than workspace links. Final companion tarballs were refreshed and both host smoke and Loader composition passed again. No real credentials were used.
 
-## Files and blockers
+## Evidence and reproduction
 
-- Current files: `packages/client/ui-authorization/**`, `packages/credentials/web-authorization/tests/composition.spec.ts`, host manifest, `tsconfig.client.json`, `tsconfig.base.json`, `pnpm-lock.yaml`, this checkpoint and design. Next work targets package composition/built tests; the proposed Agent Note still needs final implementation details and a bilingual pair.
-- Confirmed generated residue from the interrupted broad test run was removed.
-- Initial checkpoint committed locally. Git author was unset; configured repository-local verified GitHub username and no-reply address.
-- Additional discovery: `lxy271713/dsh-account-authorization` requires missing `target` metadata and refuses text/secret prompts; `Gluking81/dsh-openai-codex-web-bridge` targets 0.1.2-alpha.1 and custom HTTP routes. Neither establishes an equivalent current-Remote implementation. Source review, not runtime compatibility certification.
-- No commits pushed, PR created, or package published. No current execution blocker.
-- Frozen install passed after the new workspace importers/dependencies were added. Lock changes are limited to these packages. Sandbox install aborts due to the inaccessible host store; the authorized escalated identical install succeeds. No pending install mismatch.
-- Decisions to retain: cancel uses only the attempt controller; prompt withdrawal is not human decline; unknown/late actions reject; expired handles disappear; secret answers are never retained; full attempt view is bounded in UTF-8 bytes. Browser reload intentionally abandons the handle and relies on lease expiry. Concurrent prompts fail explicitly.
+- `../web-authorization-final-build-retry.log`: full successful build.
+- `../web-authorization-milestone-tests.log`: 17 tests; `../web-authorization-select-tests.log`: final component coverage.
+- `../web-authorization-lint-final.log` and `../web-authorization-select-lint.log`: successful lint commands.
+- `../web-authorization-doc-sync-final.log`: exact 40/41 documentation result.
+- `packages/credentials/web-authorization/tests/built-smoke.mjs`: committed artifact-only test, run with plain Node after a host build.
+- `../web-authorization-external-consumer/{smoke.mjs,composition.mjs,package.json,pnpm-workspace.yaml}`: installed external consumer and both passing smoke scripts. Run `node smoke.mjs` and `node composition.mjs` there.
+- `../pack-web-authorization.ps1`: initial transitive tarball pack helper. Initial 23 tarballs are in `../web-authorization-packed`; refreshed two companion tarballs are in `../../web-authorization-packed-final`. Consumer overrides name their exact paths. Installation used `pnpm install --ignore-scripts --offline` with the host package store.
+- Original Phase 1 research remains in the design file's Git history and the unchanged external copy `../provider-editor-phase1-research.md`. Maintained design: `docs/provider-editor-design.md`.
+
+## Current files and next step
+
+Final milestone contains the two companion packages, their tests/docs, `docs/provider-editor-design*`, credentials subsystem/config/capability catalogs and pairs, package maps, generated extension catalogs, generator classification maps, the implemented Agent Note and this checkpoint. No unfinished production implementation remains; review `git status --short` and `git log --oneline` before further work.
+
+Recommended next step: a manual deployed Web smoke using a synthetic flow, then optional real provider authorization with user-supplied credentials. This run did not launch a deployed browser session or perform real OAuth; source component/Cordis tests and installed host-package tests do not establish those guarantees. Re-run the unrelated symlink fixture on a host that permits symlinks. Do not publish or push without a new instruction.

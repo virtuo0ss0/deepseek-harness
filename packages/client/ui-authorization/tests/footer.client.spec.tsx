@@ -35,7 +35,7 @@ it('masks and clears secret input when prompt identity changes, and disposes obs
   expect(input.type).toBe('password')
   fireEvent.change(input, { target: { value: 'never-retain' } })
   expect(rendered.container.querySelector('script')).toBeNull()
-  act(() =>{  store.update((state) => {
+  act(() => { store.update((state) => {
     state.attempt!.prompt = { promptId: 'second' as PromptId, kind: 'text', message: 'Next code' }
   }) })
   expect(screen.getByLabelText<HTMLInputElement>('Next code').value).toBe('')
@@ -52,7 +52,7 @@ it('renders select choices and safe link attributes with a stable user-output sn
   const store = createSnapshotStore<State>({ flows: [], busy: false, error: false, label: 'Example', attempt: {
     attemptId: 'attempt' as AttemptId, status: 'running', notices: [{ message: 'Continue in browser', url: 'https://example.com/authorize', code: 'ABCD' }],
     prompt: { promptId: 'choice' as PromptId, kind: 'select', message: 'Choose environment',
-      options: [{ id: 'test', label: 'Test' }] },
+      options: [{ id: '', label: 'Test' }] },
   } })
   const answer = vi.fn(async () => {})
   const props: FooterProps = {
@@ -65,7 +65,7 @@ it('renders select choices and safe link attributes with a stable user-output sn
   const link = screen.getByRole('link')
   expect(link.getAttribute('rel')).toBe('noopener noreferrer')
   expect(link.getAttribute('referrerpolicy')).toBe('no-referrer')
-  fireEvent.change(screen.getByLabelText('Choose environment'), { target: { value: 'test' } })
+  fireEvent.change(screen.getByLabelText('Choose environment'), { target: { value: '0' } })
   fireEvent.click(screen.getByText(en.submit))
-  expect(answer).toHaveBeenCalledWith('choice', 'test')
+  expect(answer).toHaveBeenCalledWith('choice', '')
 })

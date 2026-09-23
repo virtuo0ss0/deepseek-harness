@@ -2919,6 +2919,41 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'webAuthorization',
+    summary: 'Current Gateway transport; attempt state belongs to the service\'s Cordis scope.',
+    description: 'Current Gateway transport; attempt state belongs to the service\'s Cordis scope.',
+    methods: [
+      {
+        signature: '@Remote list(): AuthorizationEntry[]',
+        description: 'Read the authorization directory.',
+        parameters: [],
+        returns: 'all registered flows, without other clients\' attempt identities.',
+      },
+      {
+        signature: '@Remote begin(request: BeginRequest): AttemptView',
+        description: 'Begin or recover an owned attempt.',
+        parameters: [{ name: 'request', description: 'random client capability and registered flow selection.' }],
+        returns: 'initial state.',
+      },
+      {
+        signature: '@Remote status(attemptId: AttemptId): AttemptView',
+        description: 'Observe current state and renew a live lease.',
+        parameters: [{ name: 'attemptId', description: 'private capability.' }],
+        returns: 'redacted current state.',
+      },
+      {
+        signature: '@Remote answer(attemptId: AttemptId, promptId: PromptId, answer: string): void',
+        description: 'Answer a currently pending question; the answer is not echoed.',
+        parameters: [{ name: 'attemptId', description: 'private capability.' }, { name: 'promptId', description: 'current question identity.' }, { name: 'answer', description: 'transient input, never retained in a response.' }],
+      },
+      {
+        signature: '@Remote cancel(attemptId: AttemptId): void',
+        description: 'Withdraw only the identified attempt.',
+        parameters: [{ name: 'attemptId', description: 'exact attempt to withdraw; cannot address a newer attempt by key.' }],
+      },
+    ],
+  },
+  {
     key: 'webhookRuntime',
     summary: 'Fire-and-forget rule runtime.',
     description: 'Fire-and-forget rule runtime. Session creation is the only built-in action.',
@@ -3891,6 +3926,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type AttachmentId = Branded<\'AttachmentId\'>;',
   },
   {
+    name: 'AttemptId',
+    declaration: 'export type AttemptId = Branded<\'WebAuthorizationAttemptId\'>;',
+  },
+  {
+    name: 'AttemptView',
+    declaration: 'export interface AttemptView {\n    attemptId: AttemptId;\n    status: \'running\' | \'authorized\' | \'cancelled\' | \'failed\';\n    notices: AuthorizationNotice[];\n    prompt?: PromptView;\n}',
+  },
+  {
     name: 'AuthorizationEntry',
     declaration: 'export interface AuthorizationEntry {\n    key: CredentialKey;\n    label: string;\n    methods: readonly AuthorizationMethod[];\n    inFlight: boolean;\n}',
   },
@@ -3953,6 +3996,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'BashEnvVariableInfo',
     declaration: 'export interface BashEnvVariableInfo extends BashEnvVariable {\n    contributor: string;\n    key: DshEnvironmentKey;\n}',
+  },
+  {
+    name: 'BeginRequest',
+    declaration: 'export interface BeginRequest {\n    attemptId: AttemptId;\n    key: CredentialKey;\n    method: string;\n}',
   },
   {
     name: 'Branded',
@@ -4975,12 +5022,20 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface PromptFileBinding extends Disposable {\n    commit(): void;\n}',
   },
   {
+    name: 'PromptId',
+    declaration: 'export type PromptId = Branded<\'WebAuthorizationPromptId\'>;',
+  },
+  {
     name: 'PromptSection',
     declaration: 'export interface PromptSection {\n    readonly name: string;\n    readonly order: number;\n    readonly text: string | ((context: AssembleContext) => string);\n    readonly interpolate?: boolean;\n    readonly complete?: boolean;\n}',
   },
   {
     name: 'PromptSectionOrderName',
     declaration: 'export type PromptSectionOrderName = keyof typeof SECTION_ORDERS;',
+  },
+  {
+    name: 'PromptView',
+    declaration: 'export type PromptView = {\n    promptId: PromptId;\n} & ({\n    kind: \'text\' | \'secret\';\n    message: string;\n    placeholder?: string;\n} | {\n    kind: \'select\';\n    message: string;\n    options: AuthorizationPromptOption[];\n});',
   },
   {
     name: 'ProviderRequestId',

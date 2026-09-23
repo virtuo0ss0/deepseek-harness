@@ -137,7 +137,7 @@ export class WebAuthorizationAttempts {
             throw refusal('prompt-too-large')
           }
           return await new Promise<string>((resolve, reject) => {
-            const withdraw = (): void =>{  this.clearPrompt(attempt, refusal('withdrawn')) }
+            const withdraw = (): void => { this.clearPrompt(attempt, refusal('withdrawn')) }
             attempt.pending = { view, resolve, reject, detach: () => prompt.signal?.removeEventListener('abort', withdraw) }
             attempt.view.prompt = view
             this.bound(attempt)
