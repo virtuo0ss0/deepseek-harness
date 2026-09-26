@@ -481,6 +481,20 @@ export interface Config {
 
 Source: [`packages/client/hmr/src/index.ts:30`](../packages/client/hmr/src/index.ts)
 
+<a id="deepseek-aidsh-client-ui-authorization"></a>
+
+## `@deepseek-ai/dsh-client-ui-authorization`
+
+```ts config-catalog
+/** Browser observation cadence; configure the host lease above the expected reconnect gap. */
+export interface Config {
+  /** Interval in milliseconds between browser status observations. */
+  pollMs: number
+}
+```
+
+Source: [`packages/client/ui-authorization/src/index.ts:6`](../packages/client/ui-authorization/src/index.ts)
+
 <a id="deepseek-aidsh-client-ui-plugin-manager"></a>
 
 ## `@deepseek-ai/dsh-client-ui-plugin-manager`
@@ -3932,6 +3946,22 @@ export interface Config {
 ```
 
 Source: [`packages/bundle/web-app/src/index.ts:44`](../packages/bundle/web-app/src/index.ts)
+
+<a id="deepseek-aidsh-web-authorization"></a>
+
+## `@deepseek-ai/dsh-web-authorization`
+
+Requires: `authorization`
+
+```ts config-catalog
+/** Deployment-specific grace period for browser loss and terminal retention. */
+export interface Config {
+  /** Abandoned attempts expire after this many milliseconds without observation. */
+  leaseMs: number
+}
+```
+
+Source: [`packages/credentials/web-authorization/src/types.ts:40`](../packages/credentials/web-authorization/src/types.ts)
 
 <a id="deepseek-aidsh-web-fetch-http"></a>
 
