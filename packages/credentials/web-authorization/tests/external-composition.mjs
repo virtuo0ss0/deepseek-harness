@@ -29,8 +29,16 @@ try {
   await ctx.loader.await()
   assert.deepEqual(ctx.webAuthorization.list(), [])
   assert.equal([...ctx.loader.entries()].filter(entry => entry.options.name === '@deepseek-ai/dsh-client-ui-authorization').length, 1)
-  console.log('Installed public plugin composition passed: authorization, host companion, browser host entry.')
+  const rows = []
+  ctx.emit('webserver/index-inject', rows)
+  assert.deepEqual(rows, [{
+    kind: 'global', name: '__DSH_WEB_AUTHORIZATION_CONFIG__', value: { pollMs: 1000 },
+  }])
+  console.log('Installed public plugin composition passed: authorization, both companions, public page bootstrap.')
 } finally {
   await ctx.fiber.dispose()
+  const rows = []
+  ctx.emit('webserver/index-inject', rows)
+  assert.deepEqual(rows, [])
   await rm(dir, { recursive: true, force: true })
 }

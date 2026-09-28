@@ -1,17 +1,17 @@
-/** Host loader entry and validation for the generic authorization footer. */
-import Schema from '@deepseek-ai/schemastery'
+/** Host loader entry and page bootstrap for the generic authorization footer. */
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-host-webserver'
+import { type Config, AUTHORIZATION_CONFIG_GLOBAL } from './config.ts'
 
-/** Browser observation cadence; configure the host lease above the expected reconnect gap. */
-export interface Config {
-  /** Interval in milliseconds between browser status observations. */
-  pollMs: number
-}
-export const Config: Schema<Config> = Schema.object({ pollMs: Schema.number().step(1).min(250).max(10000).default(1000) })
+export { Config } from './config.ts'
 export const name = 'ui-authorization'
 /**
- * Host half only validates configuration; browser behavior lives in the client entry.
- * @param _ctx - owning loader scope.
- * @param _config - validated browser polling configuration.
+ * Publish the public polling cadence before browser plugins activate.
+ * @param ctx - Host scope collecting page initialization data.
+ * @param config - validated Loader configuration.
  */
-export function apply(_ctx: Context, _config: Config): void {}
+export function apply(ctx: Context, config: Config): void {
+  ctx.on('webserver/index-inject', (table) => {
+    table.push({ kind: 'global', name: AUTHORIZATION_CONFIG_GLOBAL, value: { pollMs: config.pollMs } })
+  })
+}

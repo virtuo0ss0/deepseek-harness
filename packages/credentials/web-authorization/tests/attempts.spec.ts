@@ -155,9 +155,12 @@ it.each(['cancel', 'provider'] as const)('preserves an admitted credential write
   const f = await fixture(async session => session.commit({ kind: 'grant', payload: { token: 'host-only' } }))
   const modify = f.ctx.credentials.modifyRecord.bind(f.ctx.credentials)
   const write = vi.spyOn(f.ctx.credentials, 'modifyRecord').mockImplementation(async (key, mutate) => {
-    admitted.resolve(undefined)
-    await release.promise
-    return modify(key, mutate)
+    return modify(key, async (current) => {
+      const next = await mutate(current)
+      admitted.resolve(undefined)
+      await release.promise
+      return next
+    })
   })
   try {
     const view = f.start()
@@ -182,9 +185,12 @@ it('awaits an admitted write after its browser lease has expired', async () => {
   const f = await fixture(async session => session.commit({ kind: 'grant', payload: { token: 'retained-on-host' } }))
   const modify = f.ctx.credentials.modifyRecord.bind(f.ctx.credentials)
   const write = vi.spyOn(f.ctx.credentials, 'modifyRecord').mockImplementation(async (key, mutate) => {
-    admitted.resolve(undefined)
-    await release.promise
-    return modify(key, mutate)
+    return modify(key, async (current) => {
+      const next = await mutate(current)
+      admitted.resolve(undefined)
+      await release.promise
+      return next
+    })
   })
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
   try {

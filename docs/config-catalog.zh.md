@@ -488,14 +488,14 @@ export interface Config {
 ## `@deepseek-ai/dsh-client-ui-authorization`
 
 ```ts config-catalog
-/** Browser observation cadence; configure the host lease above the expected reconnect gap. */
+/** Browser observation cadence; keep the Host lease above expected reconnect gaps. */
 export interface Config {
   /** Interval in milliseconds between browser status observations. */
   pollMs: number
 }
 ```
 
-来源： [`packages/client/ui-authorization/src/index.ts:6`](../packages/client/ui-authorization/src/index.ts)
+来源： [`packages/client/ui-authorization/src/config.ts:5`](../packages/client/ui-authorization/src/config.ts)
 
 <a id="deepseek-aidsh-client-ui-plugin-manager"></a>
 

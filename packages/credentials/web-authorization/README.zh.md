@@ -61,4 +61,4 @@ Host 最多保留 32 次尝试，每次最多 16 条通知。完整序列化尝�
 
 ## Known Limitations and Deferred Work
 
-- 部署后的浏览器会话和真实 OAuth 尚未验证。需要 Provider 私有初始化的注册 flow（包括 DeepSeek Platform 账户 flow）必须使用其所属账户 UI。Host 重启会丢失尝试；直接通过凭据适配器写入的 Provider 仍负责取消顺序。取消不承诺回滚或发行方撤销。不提供凭据删除，也不重新解释 API-key 就绪状态。
+- 计划中的 12 个部署后浏览器场景均已通过合成 flow 验证；真实 Provider OAuth 仍未验证。需要 Provider 私有初始化的注册 flow（包括 DeepSeek Platform 账户 flow）必须使用其所属账户 UI。Host 重启会丢失尝试；直接通过凭据适配器写入的 Provider 仍负责取消顺序。取消不承诺回滚或发行方撤销。不提供凭据删除，也不重新解释 API-key 就绪状态。

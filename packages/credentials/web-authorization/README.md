@@ -60,4 +60,4 @@ None. Authorization interaction does not enter model context.
 
 ## Known Limitations and Deferred Work
 
-- A deployed browser session and real OAuth remain untested. Registered flows requiring private provider initialization, including the DeepSeek Platform account flow, must use their owning account UI. Host restart loses attempts; providers writing directly through a credential adapter remain responsible for cancellation ordering. Cancellation promises neither rollback nor issuer revocation. No credential deletion or API-key readiness reinterpretation is provided.
+- All 12 planned deployed-browser scenarios pass with synthetic flows; real provider OAuth remains untested. Registered flows requiring private provider initialization, including the DeepSeek Platform account flow, must use their owning account UI. Host restart loses attempts; providers writing directly through a credential adapter remain responsible for cancellation ordering. Cancellation promises neither rollback nor issuer revocation. No credential deletion or API-key readiness reinterpretation is provided.

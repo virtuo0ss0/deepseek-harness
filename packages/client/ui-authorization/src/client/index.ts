@@ -7,7 +7,7 @@ import remote from '@deepseek-ai/dsh-web-authorization/remote'
 import { AuthorizationController } from './controller.ts'
 import { AuthorizationFooter, type FooterInjected } from './AuthorizationFooter.tsx'
 import { en, zh, type CopyKey } from './locales.ts'
-import type { Config } from '../index.ts'
+import { Config, AUTHORIZATION_CONFIG_GLOBAL } from '../config.ts'
 
 export type { FooterInjected, FooterProps } from './AuthorizationFooter.tsx'
 export type { CopyKey } from './locales.ts'
@@ -21,10 +21,12 @@ export const inject = ['remote', 'slots', 'locale']
 /**
  * Mount the Remote contribution and register a controller for each footer declaration lifetime.
  * @param ctx - browser context with Remote, locale and slots.
- * @param config - validated polling cadence.
  * @returns teardown for UI registrations, controllers and Remote calls.
  */
-export async function apply(ctx: Context, config: Config): Promise<() => Promise<void>> {
+export async function apply(ctx: Context): Promise<() => Promise<void>> {
+  const page = globalThis as Partial<Record<typeof AUTHORIZATION_CONFIG_GLOBAL, unknown>>
+  const payload = page[AUTHORIZATION_CONFIG_GLOBAL]
+  const config = Config(payload === undefined ? {} : payload)
   const unmount = await ctx.remote.$mount(remote)
   const ui = ctx.inject(['remote.webAuthorization', 'slots', 'locale'], (scope) => {
     scope.effect(() => scope.locale.register('authorization', { en, zh }), 'authorization: dictionaries')

@@ -26,6 +26,8 @@ The browser plugin requires Remote, locale and slots, and mounts the generated a
 |---|---|---|
 | `pollMs` | `1000` | Observation interval; integer milliseconds from 250 to 10000. |
 
+The Host publishes only the validated `pollMs` value through the Webserver's structured page bootstrap. Browser entries receive no Host Loader config argument. Missing page data uses the schema default; malformed supplied data prevents the browser plugin from mounting. A Host config change takes effect after page reload, while a plugin mounted later in an already-open page uses that page's value.
+
 The footer owns a transient attempt capability. Answers include both attempt and prompt identity. Input stays in the keyed prompt component and clears on submission, prompt replacement or unmount. Closing the footer clears state and timers and requests cancellation of its exact attempt. A lost unload request falls back to the host lease. A reload starts without a handle; a short disconnect retains the in-memory handle. Raw transport errors and credential values are never display state.
 
 Settlement reports the authorization service outcome. It does not imply provider configuration, change `keyConfigured`, delete credentials or revoke issuer access.
@@ -44,4 +46,4 @@ None. Authorization state does not enter model context.
 
 ## Known Limitations and Deferred Work
 
-- A deployed browser session and real OAuth have not been exercised. Host restart loses attempts. Cancellation preserves admitted writes and never implies rollback. Provider-specific initialization remains the responsibility of the owning UI.
+- All 12 planned deployed-browser scenarios pass with synthetic flows, including interaction and lifecycle disposal; real provider OAuth has not been exercised. Host restart loses attempts. Cancellation preserves admitted writes and never implies rollback. Provider-specific initialization remains the responsibility of the owning UI.
