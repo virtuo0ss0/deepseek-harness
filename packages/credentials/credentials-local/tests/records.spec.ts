@@ -346,4 +346,32 @@ describe('record mutation', () => {
       .rejects.toThrow(/disposed/)
     await expect(credentials.deleteRecord(CODEX)).rejects.toThrow(/disposed/)
   })
+
+  it('persists a record whose mutation was admitted before disposal', async () => {
+    const dir = await tempDir()
+    const path = join(dir, '.credentials.yaml')
+    const ctx = new Context()
+    const fiber = ctx.plugin(LocalCredentialProvider, { path, watch: false })
+    await fiber
+    const credentials = ctx.credentials
+    const admitted = Promise.withResolvers<undefined>()
+    const release = Promise.withResolvers<undefined>()
+    const write = credentials.modifyRecord(CODEX, async () => {
+      admitted.resolve(undefined)
+      await release.promise
+      return { kind: 'grant', payload: { marker: 'admitted-before-disposal' } }
+    })
+
+    try {
+      await admitted.promise
+      const disposal = fiber.dispose()
+      release.resolve(undefined)
+      await expect(write).resolves.toEqual({ kind: 'grant', payload: { marker: 'admitted-before-disposal' } })
+      await disposal
+      expect(await readFile(path, 'utf8')).toContain('admitted-before-disposal')
+    } finally {
+      release.resolve(undefined)
+      await fiber.dispose()
+    }
+  })
 })

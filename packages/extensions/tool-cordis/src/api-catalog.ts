@@ -514,7 +514,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Offer a way to obtain one credential. One flow per key: two plugins claiming the same key would each write a record in their own format, and whichever ran last would leave the other reading a payload it cannot parse.',
         parameters: [{ name: 'flow', description: 'the key it writes, its label, its methods, and its runner.' }],
         returns: 'Disposer that withdraws this flow.',
-        throws: ['{AuthorizationError} code `DUPLICATE_FLOW` when the key is already claimed.'],
+        throws: ['{AuthorizationError} code `DUPLICATE_FLOW` when the key is already claimed, or `DISPOSED` when this service or its root is unloading.'],
       },
       {
         signature: 'list(): readonly AuthorizationEntry[]',
@@ -538,7 +538,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Run one attempt to authorize a key, and report how it ended.\n\nOne attempt per key at a time. A second caller is refused rather than joined: the two would be prompting different humans through the same flow, and the second would answer questions the first was asked.',
         parameters: [{ name: 'request', description: 'the key, the method, the surface, and the cancel signal.' }],
         returns: '`authorized` once the flow\'s record is committed during this attempt and observed, or `cancelled` when the human declined or the caller withdrew.',
-        throws: ['{AuthorizationError} code `NO_FLOW` when nothing claims the key, `UNKNOWN_METHOD` when the named method is not one the flow offers, `ALREADY_IN_FLIGHT` when an attempt is already running for the key, or `NOT_COMMITTED` when the flow resolved without committing a record during the attempt.'],
+        throws: ['{AuthorizationError} code `DISPOSED` during service or root shutdown, `NO_FLOW` when nothing claims the key, `UNKNOWN_METHOD` when the named method is not one the flow offers, `ALREADY_IN_FLIGHT` when an attempt is already running for the key, or `NOT_COMMITTED` when the flow resolved without committing a record during the attempt.'],
       },
     ],
   },
@@ -805,7 +805,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       },
       {
         signature: 'abstract modifyRecord( key: CredentialKey, mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>, ): Promise<CredentialRecord | undefined>',
-        description: 'Serialized read-modify-write over one record — the only write path. `mutate` sees the record as it stands at the moment the write is exclusive, and returning `undefined` leaves the entry untouched. Exclusion holds across processes where the backing store supports it, which is what makes a token refresh safe: two processes rotating one refresh token concurrently would otherwise lose whichever wrote first.',
+        description: 'Serialized read-modify-write over one record — the only write path. `mutate` sees the record as it stands at the moment the write is exclusive, and returning `undefined` leaves the entry untouched. Exclusion holds across processes where the backing store supports it, which is what makes a token refresh safe: two processes rotating one refresh token concurrently would otherwise lose whichever wrote first. A queued call may be refused during disposal before `mutate` runs. Once the provider calls `mutate`, it owns the admitted operation through its durable result; disposal waits for that operation to settle.',
         parameters: [{ name: 'key', description: 'the record to modify.' }, { name: 'mutate', description: 'receives the current record and returns its replacement, or `undefined` to leave it.' }],
         returns: 'the record after the write, or the current one when `mutate` declined.',
       },

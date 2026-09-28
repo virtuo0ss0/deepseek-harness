@@ -81,7 +81,8 @@ Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnp
  *
  * @param flow - the key it writes, its label, its methods, and its runner.
  * @returns Disposer that withdraws this flow.
- * @throws {AuthorizationError} code `DUPLICATE_FLOW` when the key is already claimed.
+ * @throws {AuthorizationError} code `DUPLICATE_FLOW` when the key is already claimed,
+ *   or `DISPOSED` when this service or its root is unloading.
  */
 registerFlow(flow: AuthorizationFlow): () => void
 
@@ -117,7 +118,8 @@ cancel(key: CredentialKey): void
  * @returns `authorized` once the flow's record is committed during this
  *   attempt and observed, or `cancelled` when the human declined or the
  *   caller withdrew.
- * @throws {AuthorizationError} code `NO_FLOW` when nothing claims the key,
+ * @throws {AuthorizationError} code `DISPOSED` during service or root shutdown,
+ *   `NO_FLOW` when nothing claims the key,
  *   `UNKNOWN_METHOD` when the named method is not one the flow offers,
  *   `ALREADY_IN_FLIGHT` when an attempt is already running for the key, or
  *   `NOT_COMMITTED` when the flow resolved without committing a record
@@ -207,6 +209,9 @@ abstract listRecords(): Promise<readonly CredentialRecordEntry[]>
  * holds across processes where the backing store supports it, which is what
  * makes a token refresh safe: two processes rotating one refresh token
  * concurrently would otherwise lose whichever wrote first.
+ * A queued call may be refused during disposal before `mutate` runs. Once
+ * the provider calls `mutate`, it owns the admitted operation through its
+ * durable result; disposal waits for that operation to settle.
  * @param key - the record to modify.
  * @param mutate - receives the current record and returns its replacement, or `undefined` to leave it.
  * @returns the record after the write, or the current one when `mutate` declined.
