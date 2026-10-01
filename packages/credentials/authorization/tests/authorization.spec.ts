@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context, FiberState } from '@deepseek-ai/cordis'
 import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { CredentialKey, CredentialRecord, CredentialRecordInfo } from '@deepseek-ai/dsh-credentials'
 import AuthorizationService, {
   AuthorizationDeclinedError,
   type AuthorizationFlow,
@@ -345,6 +346,19 @@ describe('commit confirmation', () => {
     await expect(ctx.authorization.begin({ key: KEY, interaction: surface() }))
       .rejects.toThrow(/deleted its credential record/)
   })
+
+  it('re-reads an ordinary completed session commit before reporting success', async () => {
+    const ctx = await harness()
+    ctx.authorization.registerFlow({
+      key: KEY, label: 'Deleted after commit', methods: [{ id: 'test', label: 'Test' }],
+      async run(session) {
+        await session.commit({ kind: 'grant', payload: { token: 'new' } })
+        await ctx.credentials.deleteRecord(KEY)
+      },
+    })
+    await expect(ctx.authorization.begin({ key: KEY, interaction: surface() }))
+      .rejects.toMatchObject({ code: 'NOT_COMMITTED' })
+  })
 })
 
 describe('declined prompts', () => {
@@ -491,9 +505,12 @@ it.each(['local', 'caller'] as const)('finishes an admitted commit during %s can
   const release = Promise.withResolvers<undefined>()
   const modify = ctx.credentials.modifyRecord.bind(ctx.credentials)
   const write = vi.spyOn(ctx.credentials, 'modifyRecord').mockImplementation(async (key, mutate) => {
-    admitted.resolve(undefined)
-    await release.promise
-    return modify(key, mutate)
+    return modify(key, async (current) => {
+      const next = await mutate(current)
+      admitted.resolve(undefined)
+      await release.promise
+      return next
+    })
   })
   ctx.authorization.registerFlow({
     key: KEY, label: 'Account', methods: [{ id: 'browser', label: 'Browser' }],
@@ -509,6 +526,273 @@ it.each(['local', 'caller'] as const)('finishes an admitted commit during %s can
     await expect(running).resolves.toEqual({ status: 'authorized' })
     expect(await ctx.credentials.readRecord(KEY)).toMatchObject({ payload: { token: 'saved' } })
   } finally { release.resolve(undefined); write.mockRestore() }
+})
+
+it.each(['persist', 'reject'] as const)('drains an admitted %s during root disposal', async (result) => {
+  const ctx = await harness()
+  const auth = ctx.authorization
+  const credentials = ctx.credentials
+  const admitted = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  const modify = credentials.modifyRecord.bind(credentials)
+  const write = vi.spyOn(credentials, 'modifyRecord').mockImplementation((key, mutate) =>
+    modify(key, async (current) => {
+      const next = await mutate(current)
+      admitted.resolve(undefined)
+      await release.promise
+      if (result === 'reject') throw new Error('synthetic persistence failure')
+      return next
+    }))
+  const owner = await ctx.plugin({ inject: ['authorization'], apply(flowCtx) {
+    flowCtx.authorization.registerFlow({
+      key: KEY, label: 'Root drain', methods: [{ id: 'test', label: 'Test' }],
+      run: session => session.commit({ kind: 'grant', payload: { token: 'saved' } }),
+    })
+  } })
+  const running = auth.begin({ key: KEY, interaction: surface() })
+  const settled = running.then(outcome => ({ outcome }), (error: unknown) => ({ error }))
+  try {
+    await admitted.promise
+    let disposed = false
+    const disposal = ctx.fiber.dispose().then(() => { disposed = true })
+    await new Promise<void>(resolve => setImmediate(resolve))
+    expect(disposed).toBe(false)
+    await expect(auth.begin({ key: KEY, interaction: surface() })).rejects.toMatchObject({ code: 'DISPOSED' })
+    expect(() => auth.registerFlow({
+      key: OTHER, label: 'Late', methods: [{ id: 'test', label: 'Test' }],
+      run: async () => {},
+    })).toThrow(/shutting down/)
+    release.resolve(undefined)
+    await disposal
+    if (result === 'persist') {
+      expect(await settled).toEqual({ outcome: { status: 'authorized' } })
+      expect(await credentials.readRecord(KEY)).toEqual({ kind: 'grant', payload: { token: 'saved' } })
+    } else {
+      expect(await settled).toMatchObject({ error: { message: 'synthetic persistence failure' } })
+      expect(await credentials.readRecord(KEY)).toBeUndefined()
+    }
+    expect(auth.describe(KEY)).toBeUndefined()
+  } finally {
+    release.resolve(undefined)
+    await owner.dispose()
+    await ctx.fiber.dispose()
+    write.mockRestore()
+  }
+})
+
+it.each(['stopped', 'ran'] as const)('settles a durable commit when %s wins root shutdown', async (winner) => {
+  const admitted = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  const providerClosing = Promise.withResolvers<undefined>()
+  const flowClosing = Promise.withResolvers<{ disposal: Promise<void> }>()
+  const writes = new Set<Promise<CredentialRecord | undefined>>()
+  let closed = false
+  let rejectedReads = 0
+  class StrictCredentials extends MemoryCredentials {
+    constructor(ctx: Context) {
+      super(ctx)
+      ctx.effect(() => async () => {
+        closed = true
+        providerClosing.resolve(undefined)
+        await Promise.allSettled([...writes])
+      })
+    }
+
+    override describeRecord(key: CredentialKey): Promise<CredentialRecordInfo> {
+      if (closed || this.ctx.root.fiber.state !== FiberState.ACTIVE) {
+        rejectedReads += 1
+        return Promise.reject(new Error('strict provider cannot describe during shutdown'))
+      }
+      return super.describeRecord(key)
+    }
+
+    override modifyRecord(
+      key: CredentialKey,
+      mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
+    ): Promise<CredentialRecord | undefined> {
+      const write = super.modifyRecord(key, async (current) => {
+        const next = await mutate(current)
+        admitted.resolve(undefined)
+        await release.promise
+        return next
+      })
+      writes.add(write)
+      void write.then(() => { writes.delete(write) }, () => { writes.delete(write) })
+      return write
+    }
+  }
+  const ctx = new Context()
+  await ctx.plugin(StrictCredentials)
+  await ctx.plugin(AuthorizationService)
+  const auth = ctx.authorization
+  const credentials = ctx.credentials
+  auth.registerFlow({
+    key: KEY, label: 'Strict provider', methods: [{ id: 'test', label: 'Test' }],
+    async run(session) {
+      await session.commit({ kind: 'grant', payload: { token: 'durable' } })
+      if (winner === 'stopped') await new Promise<void>(() => {})
+      else flowClosing.resolve({ disposal: ctx.fiber.dispose() })
+    },
+  })
+  const running = auth.begin({ key: KEY, interaction: surface() })
+  try {
+    await admitted.promise
+    if (winner === 'stopped') {
+      let disposed = false
+      const disposal = ctx.fiber.dispose().then(() => { disposed = true })
+      await providerClosing.promise
+      expect(disposed).toBe(false)
+      release.resolve(undefined)
+      await expect(running).resolves.toEqual({ status: 'authorized' })
+      await disposal
+    } else {
+      release.resolve(undefined)
+      const { disposal } = await flowClosing.promise
+      await expect(running).resolves.toEqual({ status: 'authorized' })
+      await disposal
+    }
+    expect(await credentials.readRecord(KEY)).toEqual({ kind: 'grant', payload: { token: 'durable' } })
+    expect(rejectedReads).toBe(0)
+  } finally {
+    release.resolve(undefined)
+    await ctx.fiber.dispose()
+  }
+})
+
+it.each(['event', 'none'] as const)('refuses shutdown success without a durable session commit (%s)', async (prior) => {
+  const ctx = await harness()
+  const auth = ctx.authorization
+  const credentials = ctx.credentials
+  const original = credentials.modifyRecord.bind(credentials)
+  const failed = vi.spyOn(credentials, 'modifyRecord').mockImplementation(async (_key, mutate) => {
+    await mutate(undefined)
+    throw new Error('synthetic rejected persistence')
+  })
+  const ready = Promise.withResolvers<undefined>()
+  auth.registerFlow({
+    key: KEY, label: 'Rejected write', methods: [{ id: 'test', label: 'Test' }],
+    async run(session) {
+      if (prior === 'event') {
+        await original(KEY, () => Promise.resolve({ kind: 'grant', payload: { token: 'adapter' } }))
+      }
+      try {
+        await session.commit({ kind: 'grant', payload: { token: 'rejected' } })
+      } catch {
+        ready.resolve(undefined)
+      }
+      await new Promise<void>(() => {})
+    },
+  })
+  const running = auth.begin({ key: KEY, interaction: surface() })
+  try {
+    await ready.promise
+    await ctx.fiber.dispose()
+    await expect(running).rejects.toMatchObject({ code: 'NOT_COMMITTED' })
+  } finally {
+    await ctx.fiber.dispose()
+    failed.mockRestore()
+  }
+})
+
+it.each(['root', 'owner'] as const)('blocks late interaction at %s unload transition', async (target) => {
+  const ctx = new Context()
+  await ctx.plugin(MemoryCredentials)
+  const owner = ctx.plugin(AuthorizationService)
+  await owner
+  const auth = ctx.authorization
+  const interaction = surface()
+  let retained: AuthorizationSession | undefined
+  let transitioned = false
+  let latePrompt: Promise<{ value: string } | { error: unknown }> | undefined
+  auth.registerFlow({
+    key: KEY, label: 'Late interaction', methods: [{ id: 'test', label: 'Test' }],
+    async run(session) {
+      retained = session
+      if (target === 'owner') {
+        await session.commit({ kind: 'grant', payload: { token: 'settled' } })
+      } else {
+        await new Promise<void>(() => {})
+      }
+    },
+  })
+  const running = auth.begin({ key: KEY, interaction })
+  if (target === 'owner') await expect(running).resolves.toEqual({ status: 'authorized' })
+  ctx.on('internal/status', (fiber) => {
+    const matches = target === 'root' ? fiber === ctx.fiber : fiber.runtime?.callback === AuthorizationService
+    if (transitioned || !matches || fiber.state !== FiberState.UNLOADING) return
+    transitioned = true
+    retained!.notify({ message: 'late notice' })
+    latePrompt = retained!.prompt({ kind: 'text', message: 'late prompt' })
+      .then(value => ({ value }), (error: unknown) => ({ error }))
+  })
+  try {
+    await (target === 'root' ? ctx.fiber.dispose() : owner.dispose())
+    expect(transitioned).toBe(true)
+    expect(interaction.notices).toEqual([])
+    expect(interaction.prompts).toEqual([])
+    await expect(latePrompt).resolves.toMatchObject({ error: { code: 'CANCELLED' } })
+    if (target === 'root') await expect(running).resolves.toEqual({ status: 'cancelled' })
+  } finally {
+    await ctx.fiber.dispose()
+  }
+})
+
+it.each(['before', 'after'] as const)('settles an abandoned flow %s commit on root disposal', async (point) => {
+  const ctx = await harness()
+  const auth = ctx.authorization
+  const credentials = ctx.credentials
+  const entered = Promise.withResolvers<undefined>()
+  const never = new Promise<void>(() => {})
+  let retained: AuthorizationSession | undefined
+  ctx.authorization.registerFlow({
+    key: KEY, label: 'Abandoned flow', methods: [{ id: 'test', label: 'Test' }],
+    async run(session) {
+      retained = session
+      if (point === 'after') await session.commit({ kind: 'grant', payload: { token: 'saved' } })
+      entered.resolve(undefined)
+      await never
+    },
+  })
+  const running = auth.begin({ key: KEY, interaction: surface() })
+  await entered.promise
+  await ctx.fiber.dispose()
+  await expect(running).resolves.toEqual({ status: point === 'after' ? 'authorized' : 'cancelled' })
+  await expect(retained!.commit({ kind: 'grant', payload: { token: 'late' } })).rejects.toMatchObject({
+    code: 'CANCELLED',
+  })
+  expect(await credentials.readRecord(KEY)).toEqual(point === 'after'
+    ? { kind: 'grant', payload: { token: 'saved' } } : undefined)
+})
+
+it('cancels a commit waiting before provider admission during root disposal', async () => {
+  const ctx = await harness()
+  const auth = ctx.authorization
+  const credentials = ctx.credentials
+  const reached = Promise.withResolvers<undefined>()
+  const release = Promise.withResolvers<undefined>()
+  const original = credentials.modifyRecord.bind(credentials)
+  const write = vi.spyOn(credentials, 'modifyRecord').mockImplementation(async (key, mutate) => {
+    reached.resolve(undefined)
+    await release.promise
+    return original(key, mutate)
+  })
+  auth.registerFlow({
+    key: KEY, label: 'Queued', methods: [{ id: 'test', label: 'Test' }],
+    run: session => session.commit({ kind: 'grant', payload: { token: 'late' } }),
+  })
+  const running = auth.begin({ key: KEY, interaction: surface() })
+  try {
+    await reached.promise
+    const disposing = ctx.fiber.dispose()
+    release.resolve(undefined)
+    await disposing
+    await expect(running).resolves.toEqual({ status: 'cancelled' })
+    expect(await credentials.readRecord(KEY)).toBeUndefined()
+  } finally {
+    release.resolve(undefined)
+    await ctx.fiber.dispose()
+    write.mockRestore()
+  }
 })
 
 it('rejects a settled session commit before and during the next attempt', async () => {

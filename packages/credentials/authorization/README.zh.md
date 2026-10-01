@@ -53,7 +53,7 @@ const dispose = ctx.authorization.registerFlow({
     session.notify({ message: 'Continue in your browser', url: 'https://auth.example/start' })
     const code = await session.prompt({ kind: 'text', message: 'Paste the code' })
     const { token } = await exchangeCode(code, session.signal)
-    await ctx.credentials.modifyRecord(key, () => Promise.resolve({ kind: 'grant', payload: { token } }))
+    await session.commit({ kind: 'grant', payload: { token } })
   },
 })
 
@@ -62,7 +62,7 @@ ctx.authorization.describe(key)   // the entry above, or undefined
 dispose()                         // unregister; withdraws any running attempt
 ```
 
-flow 声明它写入的凭据记录、面向用户的标签以及它提供的登录方法，最优先者在前。`run()` 通过会话与人对话——单向 notice 与 flow 无法自行回答的问题——并且必须在返回前通过 `ctx.credentials` 提交记录：seam 会拒绝未提交就返回的 flow。`list()` 与 `describe()` 让界面展示可授权的内容以及是否有尝试在运行；`dispose()` 注销该 flow 并撤销仍在运行中的尝试。
+flow 声明它写入的凭据记录、面向用户的标签以及它提供的登录方法，最优先者在前。`run()` 通过会话与人对话——单向 notice 与 flow 无法自行回答的问题——并且必须在返回前提交记录：seam 会拒绝未提交就返回的 flow。直接写入共享凭据存储时，优先使用 `session.commit(record)`；使用自有存储适配器的 flow 可以继续通过该适配器写入。`list()` 与 `describe()` 让界面展示可授权的内容以及是否有尝试在运行；`dispose()` 注销该 flow 并撤销仍在运行中的尝试。
 
 ### 发起一次尝试
 
@@ -75,6 +75,7 @@ flow 声明它写入的凭据记录、面向用户的标签以及它提供的登
 - **未提交就返回的 flow 会被拒绝**——抛出 `NOT_COMMITTED`，因此 `authorized` 永远意味着记录真的已存储。
 - **点名 flow 未提供的方法会抛出 `UNKNOWN_METHOD`**——不点名则运行 flow 的第一个方法。
 - **「不」是一种结果，不是故障**——被拒绝的 prompt 让尝试以 `cancelled` 结算，与撤销的 signal 完全一致；其余任何失败都以抛出的错误抵达调用方。
+- **关闭期间拒绝新工作**——authorization 服务或根作用域开始卸载后，`begin()` 与 `registerFlow()` 会抛出 `DISPOSED`。
 
 -----
 
@@ -103,7 +104,7 @@ flow 声明它写入的凭据记录、面向用户的标签以及它提供的登
 
 ### 生命周期
 
-每个键同时只允许一次尝试。`begin()` 校验键与方法、拒绝繁忙键的第二次尝试，并用一个 `AuthorizationSession` 运行 flow——它携带所选方法、取消 signal 以及路由到请求交互的 `notify`/`prompt` 回调。被撤销的尝试会立即结算，即使 flow 从未响应它的 signal——被遗弃的运行任其自行结束，而它若仍设法提交了一条记录，那也是一条人确实授权过的记录。键在 `authorization/settled` 触发之前释放，因此以启动下一次尝试来响应的监听器不会被拒绝；监听器失败按凭据 seam 的规则就地遏制。
+每个键同时只允许一次尝试。`begin()` 校验键与方法、拒绝繁忙键的第二次尝试，并用一个 `AuthorizationSession` 运行 flow——它携带所选方法、取消 signal 以及路由到请求交互的 `notify`/`prompt` 回调。若凭据提供者尚未进入变更回调，撤销会结算尝试，即使 flow 忽略取消 signal。回调一旦接纳 `session.commit()`，撤销就不能撤回写入；服务关闭会等待已接纳的写入，但不会无限期等待写入后的 flow 代码。键在 `authorization/settled` 触发之前释放，因此只要服务仍在运行，响应事件而启动下一次尝试的监听器就不会被拒绝；监听器失败按凭据 seam 的规则就地遏制。
 
 ### 交互词汇
 
@@ -111,7 +112,7 @@ notice 是单向的，且从不携带机密：一条消息，以及可选的「�
 
 ### 提交确认
 
-尝试期间，seam 监听该 flow 键上的 `credentials/record-updated`，`run()` 返回后再重读 `describeRecord`——确认提交确实发生在当下，因为在重新授权时记录早已存在，只看存在与否会让陈旧凭据冒充新鲜授权。未提交就返回的 flow，或删除记录而非提交的 flow，会抛出 `NOT_COMMITTED`。
+尝试期间，`session.commit()` 直接确认它的写入已完成。对于通过其他凭据适配器写入的 flow，seam 会监听该键的 `credentials/record-updated`。正常运行时，报告成功前还会重读 `describeRecord`：只看记录存在与否会让上次授权留下的陈旧凭据冒充新鲜授权，后续删除也不能伪装成成功。关闭期间，已获准且持久完成的 `session.commit()` 可以不再读取正在销毁的 Provider 而结算为已授权；仅有事件观察不足以确认此结果。未提交就返回的 flow，或删除记录而非提交的 flow，会抛出 `NOT_COMMITTED`。
 
 </details>
 
@@ -161,5 +162,3 @@ notice 是单向的，且从不携带机密：一条消息，以及可选的「�
 上文限制点名的开放方向——可恢复的尝试、服务端吊销、孤儿记录发现——每一项落地前都需要各自的设计与存储。不变式伴生插件是唯一承重的运行时检查：结算时键必须已释放，因为卡死的键与繁忙的键无法区分，只有重启才能释放它。
 
 </details>
-
-flow 可使用 session.commit(record) 拒绝取消后的写入。提交一旦获准，cancel() 会保留执行，直到持久化和流程结束。通过自有凭证适配器写入的 flow 仍须负责自身的取消顺序。

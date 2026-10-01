@@ -240,6 +240,9 @@ export abstract class CredentialProvider extends Service {
    * holds across processes where the backing store supports it, which is what
    * makes a token refresh safe: two processes rotating one refresh token
    * concurrently would otherwise lose whichever wrote first.
+   * A queued call may be refused during disposal before `mutate` runs. Once
+   * the provider calls `mutate`, it owns the admitted operation through its
+   * durable result; disposal waits for that operation to settle.
    * @param key - the record to modify.
    * @param mutate - receives the current record and returns its replacement, or `undefined` to leave it.
    * @returns the record after the write, or the current one when `mutate` declined.

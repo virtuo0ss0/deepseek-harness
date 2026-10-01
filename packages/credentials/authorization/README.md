@@ -53,7 +53,7 @@ const dispose = ctx.authorization.registerFlow({
     session.notify({ message: 'Continue in your browser', url: 'https://auth.example/start' })
     const code = await session.prompt({ kind: 'text', message: 'Paste the code' })
     const { token } = await exchangeCode(code, session.signal)
-    await ctx.credentials.modifyRecord(key, () => Promise.resolve({ kind: 'grant', payload: { token } }))
+    await session.commit({ kind: 'grant', payload: { token } })
   },
 })
 
@@ -62,7 +62,7 @@ ctx.authorization.describe(key)   // the entry above, or undefined
 dispose()                         // unregister; withdraws any running attempt
 ```
 
-A flow declares the credential record it writes, a user-facing label, and the sign-in methods it offers, most preferred first. `run()` talks to the human through the session — one-way notices and questions the flow cannot answer for itself — and must commit the record through `ctx.credentials` before resolving: the seam refuses a flow that resolved without committing. `list()` and `describe()` let a surface show what can be authorized and whether an attempt is running; `dispose()` unregisters the flow and withdraws any attempt still running.
+A flow declares the credential record it writes, a user-facing label, and the sign-in methods it offers, most preferred first. `run()` talks to the human through the session — one-way notices and questions the flow cannot answer for itself — and must commit the record before resolving: the seam refuses a flow that resolved without committing. Prefer `session.commit(record)` when the flow writes directly through the shared credential store; a flow with its own store adapter may use that adapter. `list()` and `describe()` let a surface show what can be authorized and whether an attempt is running; `dispose()` unregisters the flow and withdraws any attempt still running.
 
 ### Running an attempt
 
@@ -75,6 +75,7 @@ A surface runs one attempt per credential at a time. The interaction travels wit
 - **A flow that resolves without committing is refused** — `NOT_COMMITTED`, so `authorized` always means the record is really stored.
 - **Naming a method the flow does not offer throws `UNKNOWN_METHOD`** — naming none runs the flow's first method.
 - **"No" is an outcome, not a breakage** — a declined prompt settles the attempt as `cancelled`, the same as a withdrawn signal; any other failure reaches the caller as a thrown error.
+- **Shutdown refuses new work** — `begin()` and `registerFlow()` throw `DISPOSED` once the authorization service or root is unloading.
 
 -----
 
@@ -103,7 +104,7 @@ This section explains the design decisions behind the seam and points at the cod
 
 ### Lifecycle
 
-One attempt per key at a time. `begin()` validates the key and method, refuses a second attempt for a busy key, and runs the flow with an `AuthorizationSession` that carries the chosen method, a cancellation signal, and the `notify`/`prompt` callbacks routed to the request's interaction. A withdrawn attempt settles immediately even when the flow never reacts to its signal — the orphaned run is left to finish on its own, and a record it still manages to commit is a record the human did authorize. The key is released before `authorization/settled` fires, so a listener that reacts by starting the next attempt is not refused; listener failures are contained on the credentials seam's terms.
+One attempt per key at a time. `begin()` validates the key and method, refuses a second attempt for a busy key, and runs the flow with an `AuthorizationSession` that carries the chosen method, a cancellation signal, and the `notify`/`prompt` callbacks routed to the request's interaction. Withdrawal settles an attempt that has not entered the credential provider's mutation callback even if its flow ignores the signal. Once that callback accepts `session.commit()`, withdrawal cannot undo the write; service shutdown waits for accepted writes but does not wait indefinitely for flow code after them. The key is released before `authorization/settled` fires, so a listener that reacts by starting the next attempt is not refused while the service remains active; listener failures are contained on the credentials seam's terms.
 
 ### The interaction vocabulary
 
@@ -111,7 +112,7 @@ A notice is one-way and never carries a secret: a message, optionally the page t
 
 ### Commit confirmation
 
-During the attempt the seam watches `credentials/record-updated` for the flow's key, then after `run()` resolves it re-reads `describeRecord` — confirming the commit happened now, because on a re-auth the record already exists and presence alone would let a stale credential pass as freshly authorized. A flow that resolves without committing, or that deleted its record instead of committing one, throws `NOT_COMMITTED`.
+During the attempt, `session.commit()` directly confirms that its write completed. For flows writing through another credential adapter, the seam watches `credentials/record-updated` for the flow's key. During normal operation it also re-reads `describeRecord` before reporting success — presence alone would let a stale record from a previous authorization pass as fresh, and a later deletion must not masquerade as success. During shutdown, an admitted `session.commit()` that durably completed can settle as authorized without another read from a disposing provider; an event alone cannot establish that shutdown result. A flow that resolves without committing, or that deleted its record instead of committing one, throws `NOT_COMMITTED`.
 
 </details>
 
@@ -161,5 +162,3 @@ This Dev Note is working context for maintainers: open questions and undecided d
 The limitations above name the open directions — resumable attempts, server-side revocation, orphaned-record discovery — each needing its own design and store before landing. The invariant companion is the one load-bearing runtime check: settlement must always find the key released, because a wedged key is indistinguishable from a busy one and only a restart frees it.
 
 </details>
-
-A flow can use session.commit(record) to refuse writes after cancellation. Once commit is admitted, cancel() leaves it running until persistence and flow settlement complete. Flows that write through their own credential adapter remain responsible for their own cancellation ordering.
