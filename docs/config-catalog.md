@@ -529,6 +529,22 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-client-shortcuts -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-client-ui-authorization -->
+<a id="deepseek-aidsh-client-ui-authorization"></a>
+
+## `@deepseek-ai/dsh-client-ui-authorization`
+
+- `source`: [`packages/client/ui-authorization/src/config.ts:5`](../packages/client/ui-authorization/src/config.ts)
+
+```ts config-catalog
+/** Browser observation cadence; keep the Host lease above expected reconnect gaps. */
+export interface Config {
+  /** Interval in milliseconds between browser status observations. */
+  pollMs: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-client-ui-authorization -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-client-ui-plugin-manager -->
 <a id="deepseek-aidsh-client-ui-plugin-manager"></a>
 
@@ -4140,6 +4156,23 @@ export interface Config {
 }
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-web-app -->
+
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-web-authorization -->
+<a id="deepseek-aidsh-web-authorization"></a>
+
+## `@deepseek-ai/dsh-web-authorization`
+
+- `inject`: `authorization`
+- `source`: [`packages/credentials/web-authorization/src/types.ts:40`](../packages/credentials/web-authorization/src/types.ts)
+
+```ts config-catalog
+/** Deployment-specific grace period for browser loss and terminal retention. */
+export interface Config {
+  /** Abandoned attempts expire after this many milliseconds without observation. */
+  leaseMs: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-web-authorization -->
 
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-web-fetch-http -->
 <a id="deepseek-aidsh-web-fetch-http"></a>

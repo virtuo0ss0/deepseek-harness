@@ -371,6 +371,50 @@ abstract getDeviceIdentity(): Promise<{ deviceId?: string; userId?: AccountUserI
 
 Source: [`packages/credentials/deepseek-account/src/index.ts`](../../packages/credentials/deepseek-account/src/index.ts)
 
+<a id="ctxwebauthorization--webauthorizationservice"></a>
+
+### `ctx.webAuthorization` — `WebAuthorizationService`
+
+Current Gateway transport; attempt state belongs to the service's Cordis scope.
+
+```ts cordis-catalog
+/**
+ * Read the authorization directory.
+ * @returns all registered flows, without other clients' attempt identities.
+ */
+@Remote list(): AuthorizationEntry[]
+
+/**
+ * Begin or recover an owned attempt.
+ * @param request - random client capability and registered flow selection.
+ * @returns initial state.
+ */
+@Remote begin(request: BeginRequest): AttemptView
+
+/**
+ * Observe current state and renew a live lease.
+ * @param attemptId - private capability.
+ * @returns redacted current state.
+ */
+@Remote status(attemptId: AttemptId): AttemptView
+
+/**
+ * Answer a currently pending question; the answer is not echoed.
+ * @param attemptId - private capability.
+ * @param promptId - current question identity.
+ * @param answer - transient input, never retained in a response.
+ */
+@Remote answer(attemptId: AttemptId, promptId: PromptId, answer: string): void
+
+/**
+ * Withdraw only the identified attempt.
+ * @param attemptId - exact attempt to withdraw; cannot address a newer attempt by key.
+ */
+@Remote cancel(attemptId: AttemptId): void
+```
+
+Source: [`packages/credentials/web-authorization/src/index.ts`](../../packages/credentials/web-authorization/src/index.ts)
+
 <a id="authorization-events"></a>
 
 ### `authorization/*` events
